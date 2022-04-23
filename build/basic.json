@@ -259,7 +259,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "basic.p4",
-        "line" : 281,
+        "line" : 284,
         "column" : 8,
         "source_fragment" : "MyDeparser"
       },
@@ -339,7 +339,7 @@
       "id" : 2,
       "source_info" : {
         "filename" : "basic.p4",
-        "line" : 258,
+        "line" : 261,
         "column" : 1,
         "source_fragment" : "update_checksum( ..."
       },
@@ -395,8 +395,52 @@
   "learn_lists" : [],
   "actions" : [
     {
-      "name" : "MyIngress.compute_hashes",
+      "name" : "MyIngress.drop",
       "id" : 0,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "mark_to_drop",
+          "parameters" : [
+            {
+              "type" : "header",
+              "value" : "standard_metadata"
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 132,
+            "column" : 8,
+            "source_fragment" : "mark_to_drop(standard_metadata)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "MyIngress.drop",
+      "id" : 1,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "mark_to_drop",
+          "parameters" : [
+            {
+              "type" : "header",
+              "value" : "standard_metadata"
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 132,
+            "column" : 8,
+            "source_fragment" : "mark_to_drop(standard_metadata)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "MyIngress.compute_hashes",
+      "id" : 2,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -571,7 +615,7 @@
     },
     {
       "name" : "MyIngress.send_back",
-      "id" : 1,
+      "id" : 3,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -654,7 +698,7 @@
     },
     {
       "name" : "MyIngress.create_ack_response",
-      "id" : 2,
+      "id" : 4,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -897,7 +941,7 @@
     },
     {
       "name" : "MyIngress.create_ack_response",
-      "id" : 3,
+      "id" : 5,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1140,7 +1184,208 @@
     },
     {
       "name" : "MyIngress.create_syn_ack_response",
-      "id" : 4,
+      "id" : 6,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_2"]
+            },
+            {
+              "type" : "field",
+              "value" : ["ethernet", "dstAddr"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 176,
+            "column" : 8,
+            "source_fragment" : "tmp = hdr.ethernet.dstAddr"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ethernet", "dstAddr"]
+            },
+            {
+              "type" : "field",
+              "value" : ["ethernet", "srcAddr"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 177,
+            "column" : 8,
+            "source_fragment" : "hdr.ethernet.dstAddr = hdr.ethernet.srcAddr"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ethernet", "srcAddr"]
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_2"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 178,
+            "column" : 8,
+            "source_fragment" : "hdr.ethernet.srcAddr = tmp"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["standard_metadata", "egress_spec"]
+            },
+            {
+              "type" : "field",
+              "value" : ["standard_metadata", "ingress_port"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 179,
+            "column" : 8,
+            "source_fragment" : "standard_metadata.egress_spec = standard_metadata.ingress_port"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "syn"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x01"
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 183,
+            "column" : 8,
+            "source_fragment" : "hdr.tcp.syn = 1"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "ack"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x01"
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 184,
+            "column" : 8,
+            "source_fragment" : "hdr.tcp.ack = 1"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "seq_1"]
+            },
+            {
+              "type" : "field",
+              "value" : ["tcp", "seqNo"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 187,
+            "column" : 8,
+            "source_fragment" : "bit <32> seq = hdr.tcp.seqNo;"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "seqNo"]
+            },
+            {
+              "type" : "field",
+              "value" : ["tcp", "ackNo"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 188,
+            "column" : 8,
+            "source_fragment" : "hdr.tcp.seqNo = hdr.tcp.ackNo"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "ackNo"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "+",
+                      "left" : {
+                        "type" : "field",
+                        "value" : ["scalars", "seq_1"]
+                      },
+                      "right" : {
+                        "type" : "hexstr",
+                        "value" : "0x00000001"
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 189,
+            "column" : 8,
+            "source_fragment" : "hdr.tcp.ackNo = seq + 1"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "MyIngress.create_syn_ack_response",
+      "id" : 7,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1341,7 +1586,7 @@
     },
     {
       "name" : "basic200",
-      "id" : 5,
+      "id" : 8,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1367,7 +1612,7 @@
     },
     {
       "name" : "basic203",
-      "id" : 6,
+      "id" : 9,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1393,7 +1638,7 @@
     },
     {
       "name" : "basic197",
-      "id" : 7,
+      "id" : 10,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1423,7 +1668,7 @@
     },
     {
       "name" : "basic214",
-      "id" : 8,
+      "id" : 11,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1453,7 +1698,7 @@
     },
     {
       "name" : "basic221",
-      "id" : 9,
+      "id" : 12,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1483,7 +1728,7 @@
     },
     {
       "name" : "basic218",
-      "id" : 10,
+      "id" : 13,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1507,6 +1752,59 @@
             "line" : 218,
             "column" : 4,
             "source_fragment" : "bloom_filter_syn.read(reg_val_syn, reg_pos_syn)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "basic230",
+      "id" : 14,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "register_write",
+          "parameters" : [
+            {
+              "type" : "register_array",
+              "value" : "MyIngress.bloom_filter_syn"
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "reg_pos_syn_0"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00"
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 230,
+            "column" : 4,
+            "source_fragment" : "bloom_filter_syn.write(reg_pos_syn, 0)"
+          }
+        },
+        {
+          "op" : "register_write",
+          "parameters" : [
+            {
+              "type" : "register_array",
+              "value" : "MyIngress.bloom_filter_conn"
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "reg_pos_conn_0"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00"
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 231,
+            "column" : 4,
+            "source_fragment" : "bloom_filter_conn.write(reg_pos_conn, 0)"
           }
         }
       ]
@@ -1540,14 +1838,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [0],
+          "action_ids" : [2],
           "actions" : ["MyIngress.compute_hashes"],
           "base_default_next" : "tbl_basic197",
           "next_tables" : {
             "MyIngress.compute_hashes" : "tbl_basic197"
           },
           "default_entry" : {
-            "action_id" : 0,
+            "action_id" : 2,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -1569,14 +1867,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [7],
+          "action_ids" : [10],
           "actions" : ["basic197"],
           "base_default_next" : "node_5",
           "next_tables" : {
             "basic197" : "node_5"
           },
           "default_entry" : {
-            "action_id" : 7,
+            "action_id" : 10,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -1598,14 +1896,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [5],
+          "action_ids" : [8],
           "actions" : ["basic200"],
           "base_default_next" : "node_8",
           "next_tables" : {
             "basic200" : "node_8"
           },
           "default_entry" : {
-            "action_id" : 5,
+            "action_id" : 8,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -1627,14 +1925,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [6],
+          "action_ids" : [9],
           "actions" : ["basic203"],
           "base_default_next" : "node_8",
           "next_tables" : {
             "basic203" : "node_8"
           },
           "default_entry" : {
-            "action_id" : 6,
+            "action_id" : 9,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -1656,14 +1954,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [2],
+          "action_ids" : [4],
           "actions" : ["MyIngress.create_ack_response"],
-          "base_default_next" : "node_18",
+          "base_default_next" : "node_23",
           "next_tables" : {
-            "MyIngress.create_ack_response" : "node_18"
+            "MyIngress.create_ack_response" : "node_23"
           },
           "default_entry" : {
-            "action_id" : 2,
+            "action_id" : 4,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -1685,14 +1983,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [8],
+          "action_ids" : [11],
           "actions" : ["basic214"],
           "base_default_next" : "tbl_create_syn_ack_response",
           "next_tables" : {
             "basic214" : "tbl_create_syn_ack_response"
           },
           "default_entry" : {
-            "action_id" : 8,
+            "action_id" : 11,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -1714,14 +2012,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [4],
+          "action_ids" : [6],
           "actions" : ["MyIngress.create_syn_ack_response"],
-          "base_default_next" : "node_18",
+          "base_default_next" : "node_23",
           "next_tables" : {
-            "MyIngress.create_syn_ack_response" : "node_18"
+            "MyIngress.create_syn_ack_response" : "node_23"
           },
           "default_entry" : {
-            "action_id" : 4,
+            "action_id" : 6,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -1743,14 +2041,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [10],
+          "action_ids" : [13],
           "actions" : ["basic218"],
           "base_default_next" : "node_15",
           "next_tables" : {
             "basic218" : "node_15"
           },
           "default_entry" : {
-            "action_id" : 10,
+            "action_id" : 13,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -1772,14 +2070,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [9],
+          "action_ids" : [12],
           "actions" : ["basic221"],
           "base_default_next" : "tbl_create_ack_response_0",
           "next_tables" : {
             "basic221" : "tbl_create_ack_response_0"
           },
           "default_entry" : {
-            "action_id" : 9,
+            "action_id" : 12,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -1801,14 +2099,130 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [3],
+          "action_ids" : [5],
           "actions" : ["MyIngress.create_ack_response"],
-          "base_default_next" : "node_18",
+          "base_default_next" : "node_23",
           "next_tables" : {
-            "MyIngress.create_ack_response" : "node_18"
+            "MyIngress.create_ack_response" : "node_23"
           },
           "default_entry" : {
-            "action_id" : 3,
+            "action_id" : 5,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_drop",
+          "id" : 10,
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 225,
+            "column" : 5,
+            "source_fragment" : "drop()"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [0],
+          "actions" : ["MyIngress.drop"],
+          "base_default_next" : "node_23",
+          "next_tables" : {
+            "MyIngress.drop" : "node_23"
+          },
+          "default_entry" : {
+            "action_id" : 0,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_create_syn_ack_response_0",
+          "id" : 11,
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 228,
+            "column" : 8,
+            "source_fragment" : "create_syn_ack_response()"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [7],
+          "actions" : ["MyIngress.create_syn_ack_response"],
+          "base_default_next" : "tbl_basic230",
+          "next_tables" : {
+            "MyIngress.create_syn_ack_response" : "tbl_basic230"
+          },
+          "default_entry" : {
+            "action_id" : 7,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_basic230",
+          "id" : 12,
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 230,
+            "column" : 4,
+            "source_fragment" : "bloom_filter_syn.write(reg_pos_syn, 0); ..."
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [14],
+          "actions" : ["basic230"],
+          "base_default_next" : "node_23",
+          "next_tables" : {
+            "basic230" : "node_23"
+          },
+          "default_entry" : {
+            "action_id" : 14,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_drop_0",
+          "id" : 13,
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 234,
+            "column" : 4,
+            "source_fragment" : "drop()"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [1],
+          "actions" : ["MyIngress.drop"],
+          "base_default_next" : "node_23",
+          "next_tables" : {
+            "MyIngress.drop" : "node_23"
+          },
+          "default_entry" : {
+            "action_id" : 1,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -1816,10 +2230,10 @@
         },
         {
           "name" : "tbl_send_back",
-          "id" : 10,
+          "id" : 14,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 237,
+            "line" : 240,
             "column" : 2,
             "source_fragment" : "send_back()"
           },
@@ -1830,14 +2244,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [1],
+          "action_ids" : [3],
           "actions" : ["MyIngress.send_back"],
           "base_default_next" : null,
           "next_tables" : {
             "MyIngress.send_back" : null
           },
           "default_entry" : {
-            "action_id" : 1,
+            "action_id" : 3,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -1884,7 +2298,7 @@
             }
           },
           "true_next" : "tbl_compute_hashes",
-          "false_next" : "node_18"
+          "false_next" : "node_23"
         },
         {
           "name" : "node_5",
@@ -2028,7 +2442,7 @@
             }
           },
           "true_next" : "tbl_basic218",
-          "false_next" : "node_18"
+          "false_next" : "node_19"
         },
         {
           "name" : "node_15",
@@ -2054,14 +2468,40 @@
             }
           },
           "true_next" : "tbl_basic221",
-          "false_next" : "node_18"
+          "false_next" : "tbl_drop"
         },
         {
-          "name" : "node_18",
+          "name" : "node_19",
           "id" : 6,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 236,
+            "line" : 227,
+            "column" : 13,
+            "source_fragment" : "hdr.tcp.fin == 1"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "field",
+                "value" : ["tcp", "fin"]
+              },
+              "right" : {
+                "type" : "hexstr",
+                "value" : "0x01"
+              }
+            }
+          },
+          "true_next" : "tbl_create_syn_ack_response_0",
+          "false_next" : "tbl_drop_0"
+        },
+        {
+          "name" : "node_23",
+          "id" : 7,
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 239,
             "column" : 5,
             "source_fragment" : "hdr.ipv4.isValid()"
           },
@@ -2086,7 +2526,7 @@
       "id" : 1,
       "source_info" : {
         "filename" : "basic.p4",
-        "line" : 246,
+        "line" : 249,
         "column" : 8,
         "source_fragment" : "MyEgress"
       },
@@ -2102,7 +2542,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "basic.p4",
-        "line" : 258,
+        "line" : 261,
         "column" : 1,
         "source_fragment" : "update_checksum( ..."
       },

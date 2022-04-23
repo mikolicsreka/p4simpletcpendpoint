@@ -222,13 +222,16 @@ control MyIngress(inout headers hdr,
 					create_ack_response();
 				} else
 				{ //Ha nem: drop
-				//	drop();
+					drop();
 				}
 			} else if(hdr.tcp.fin == 1) {
-			    	// Close connection, harmadik bloom filter a removedoknak?
+			    	create_syn_ack_response();
+				// Change values to 0 -> closed
+				bloom_filter_syn.write(reg_pos_syn, 0);
+				bloom_filter_conn.write(reg_pos_conn, 0);
 			}
 			else {
-			//	drop();
+				drop();
 			}
 		}
 		

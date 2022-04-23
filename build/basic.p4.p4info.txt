@@ -3,6 +3,13 @@ pkg_info {
 }
 actions {
   preamble {
+    id: 25652968
+    name: "MyIngress.drop"
+    alias: "drop"
+  }
+}
+actions {
+  preamble {
     id: 25892681
     name: "MyIngress.compute_hashes"
     alias: "compute_hashes"

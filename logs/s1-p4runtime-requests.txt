@@ -1,5 +1,5 @@
 
-[2022-04-23 12:51:54.073] /p4.v1.P4Runtime/SetForwardingPipelineConfig
+[2022-04-23 14:24:12.082] /p4.v1.P4Runtime/SetForwardingPipelineConfig
 ---
-Message too long (64919 bytes)! Skipping log...
+Message too long (78287 bytes)! Skipping log...
 ---
