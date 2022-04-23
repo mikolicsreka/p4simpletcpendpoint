@@ -5,6 +5,9 @@
 const bit<16> TYPE_IPV4 = 0x800;
 const bit<8>  TYPE_TCP  = 6;
 
+#define BLOOM_FILTER_ENTRIES 4096
+#define BLOOM_FILTER_BIT_WIDTH 1
+
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
 *************************************************************************/
@@ -55,8 +58,8 @@ header tcp_t{
 }
 
 struct metadata {
-    /* empty */
-   // store stream data in this?
+    bit<1> is_connection_established;
+    //bit<32> seqDiff;
 }
 
 struct headers {
@@ -119,11 +122,36 @@ control MyVerifyChecksum(inout headers hdr, inout metadata meta) {
 control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
+    //For packets coming after connection establishment	
+    register<bit<BLOOM_FILTER_BIT_WIDTH>>(BLOOM_FILTER_ENTRIES) bloom_filter_syn;
+    register<bit<BLOOM_FILTER_BIT_WIDTH>>(BLOOM_FILTER_ENTRIES) bloom_filter_conn;
+    bit<32> reg_pos_syn; bit<1> reg_val_syn;
+    bit<32> reg_pos_conn; bit<1> reg_val_conn;
+
     action drop() {
         mark_to_drop(standard_metadata);
     }
-    
-    action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
+
+    action compute_hashes(ip4Addr_t ipAddr1, bit<16> port1){
+       hash(reg_pos_syn, HashAlgorithm.crc16, (bit<32>)0, {ipAddr1,
+                                                       port1,
+                                                       hdr.ipv4.protocol},
+                                                       (bit<32>)BLOOM_FILTER_ENTRIES);
+       hash(reg_pos_conn, HashAlgorithm.crc16, (bit<32>)0, {ipAddr1,
+                                                       port1,
+                                                       hdr.ipv4.protocol},
+                                                       (bit<32>)BLOOM_FILTER_ENTRIES);
+    }
+    action send_back() {
+        /* Back to the sender */
+        bit<48> tmp;
+        tmp = hdr.ethernet.dstAddr;
+        hdr.ethernet.dstAddr = hdr.ethernet.srcAddr;
+        hdr.ethernet.srcAddr = tmp; /*ahonnan most kuldjuk az lesz az uj src*/
+        standard_metadata.egress_spec = standard_metadata.ingress_port;
+    }
+
+    action create_ack_response() {
         /* Back to the sender */
 	bit<48> tmp;
 	tmp = hdr.ethernet.dstAddr;
@@ -131,32 +159,83 @@ control MyIngress(inout headers hdr,
 	hdr.ethernet.srcAddr = tmp; /*ahonnan most kuldjuk az lesz az uj src*/
 	standard_metadata.egress_spec = standard_metadata.ingress_port;
    	hdr.ipv4.ttl = hdr.ipv4.ttl - 1; /*ne bolyongjon vegtleen ideig*/
+
+	//Set the TCP Flags:
+	hdr.tcp.syn = 0;
+	hdr.tcp.ack = 1;
+	
+	//Set the seq.no
+	bit <32> seq = hdr.tcp.seqNo;
+	hdr.tcp.seqNo = hdr.tcp.ackNo;
+	hdr.tcp.ackNo = seq + 1;
     }
-    
-    table ipv4_lpm {
-        key = {
-            hdr.ipv4.dstAddr: lpm;
-        }
-        actions = {
-            ipv4_forward;
-            drop;
-            NoAction; /*skip program*/
-        }
-        size = 1024;
-        default_action = NoAction();
+
+    action create_syn_ack_response() {
+        /* Back to the sender */
+        bit<48> tmp;
+        tmp = hdr.ethernet.dstAddr;
+        hdr.ethernet.dstAddr = hdr.ethernet.srcAddr;
+        hdr.ethernet.srcAddr = tmp; /*ahonnan most kuldjuk az lesz az uj src*/
+        standard_metadata.egress_spec = standard_metadata.ingress_port;
+        //hdr.ipv4.ttl = hdr.ipv4.ttl - 1; /*ne bolyongjon vegtleen ideig*/
+
+        //Set the TCP Flags:
+        hdr.tcp.syn = 1;
+        hdr.tcp.ack = 1;
+
+        //Set the seq.no
+        bit <32> seq = hdr.tcp.seqNo;
+        hdr.tcp.seqNo = hdr.tcp.ackNo;
+        hdr.tcp.ackNo = seq + 1;
     }
     
     apply {
-        /* TODO: fix ingress control logic
-         *  - ipv4_lpm should be applied only when IPv4 header is valid
-         * cel:  memoriaszemeten ne csinaljon illesztest
-	 */
-	if (hdr.tcp.isValid()) {
-	        ipv4_lpm.apply();
-		if(hdr.ipv4.ttl == 0) {
-			drop();
+	if (hdr.ipv4.isValid() && hdr.tcp.isValid()) {
+		//Compute connection hash to see that the TCP connection
+		// is already established.
+		compute_hashes(hdr.ipv4.srcAddr, hdr.tcp.srcPort);
+		bloom_filter_conn.read(reg_val_conn, reg_pos_conn);
+		if(reg_val_conn == 1)
+		{
+			meta.is_connection_established = 1;
+		} else
+		{
+			meta.is_connection_established = 0;
 		}
+		
+	        //check if the connection is established to forward, otherwise discard
+                if (meta.is_connection_established == 1){
+                      //sequence and acknowledgment numbers should be adapted to the new connection
+                      create_ack_response();
+                } else
+		{
+			if(hdr.tcp.syn == 1 && hdr.tcp.ack == 0){
+				//Megjott az elso SYN packet -> beletesszuk a syn bloomfiltebe
+				bloom_filter_syn.write(reg_pos_syn, 1);
+				create_syn_ack_response();	
+			} else if(hdr.tcp.syn == 0 && hdr.tcp.ack == 1) {
+				//1. Volt mar syn?
+				bloom_filter_syn.read(reg_val_syn, reg_pos_syn);
+				if(reg_val_syn == 1){
+				//Ha igen: conn establish
+					bloom_filter_conn.write(reg_pos_conn, 1);
+					create_ack_response();
+				} else
+				{ //Ha nem: drop
+				//	drop();
+				}
+			} else if(hdr.tcp.fin == 1) {
+			    	// Close connection, harmadik bloom filter a removedoknak?
+			}
+			else {
+			//	drop();
+			}
+		}
+		
 	}
+	if (hdr.ipv4.isValid()) { //Sima IP packetet visszakuldjuk
+		send_back();
+	} 
     }
 }
 
