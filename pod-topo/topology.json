@@ -8,7 +8,9 @@
                            "arp -i eth0 -s 10.0.2.20 08:00:00:00:02:00"]}
     },
     "switches": {
-        "s1": { "runtime_json" : "pod-topo/s1-runtime.json" }
+        "s1": { "runtime_json" : "pod-topo/s1-runtime.json",
+               "commands":["route add default gw 10.0.3.30 dev eth0",
+                           "arp -i eth0 -s 10.0.3.30 08:00:00:00:02:00"]}
     },
     "links": [
         ["h1", "s1-p1"], ["h2", "s1-p2"]

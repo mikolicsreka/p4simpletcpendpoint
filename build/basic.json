@@ -13,9 +13,6 @@
         ["tmp_6", 32, false],
         ["tmp_7", 16, false],
         ["tmp_8", 5, false],
-        ["tmp_9", 32, false],
-        ["tmp_10", 16, false],
-        ["tmp_11", 5, false],
         ["reg_pos_syn_0", 32, false],
         ["reg_val_syn_0", 1, false],
         ["reg_pos_conn_0", 32, false],
@@ -30,7 +27,8 @@
         ["hasReturned", 1, false],
         ["userMetadata.is_connection_established", 1, false],
         ["userMetadata.tcpLength", 16, false],
-        ["_padding_0", 2, false]
+        ["userMetadata.totalLength", 32, false],
+        ["_padding_0", 7, false]
       ]
     },
     {
@@ -269,7 +267,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "basic.p4",
-        "line" : 362,
+        "line" : 379,
         "column" : 8,
         "source_fragment" : "MyDeparser"
       },
@@ -285,7 +283,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "basic.p4",
-        "line" : 128,
+        "line" : 129,
         "column" : 27,
         "source_fragment" : "bloom_filter_syn"
       },
@@ -297,7 +295,7 @@
       "id" : 1,
       "source_info" : {
         "filename" : "basic.p4",
-        "line" : 129,
+        "line" : 130,
         "column" : 27,
         "source_fragment" : "bloom_filter_conn"
       },
@@ -366,28 +364,9 @@
     {
       "name" : "calc_2",
       "id" : 3,
-      "algo" : "crc16",
-      "input" : [
-        {
-          "type" : "field",
-          "value" : ["scalars", "tmp_9"]
-        },
-        {
-          "type" : "field",
-          "value" : ["scalars", "tmp_10"]
-        },
-        {
-          "type" : "field",
-          "value" : ["scalars", "tmp_11"]
-        }
-      ]
-    },
-    {
-      "name" : "calc_3",
-      "id" : 4,
       "source_info" : {
         "filename" : "basic.p4",
-        "line" : 312,
+        "line" : 328,
         "column" : 1,
         "source_fragment" : "update_checksum( ..."
       },
@@ -440,11 +419,11 @@
       ]
     },
     {
-      "name" : "calc_4",
-      "id" : 5,
+      "name" : "calc_3",
+      "id" : 4,
       "source_info" : {
         "filename" : "basic.p4",
-        "line" : 328,
+        "line" : 343,
         "column" : 8,
         "source_fragment" : "update_checksum_with_payload( ..."
       },
@@ -559,29 +538,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 134,
-            "column" : 8,
-            "source_fragment" : "mark_to_drop(standard_metadata)"
-          }
-        }
-      ]
-    },
-    {
-      "name" : "MyIngress.drop",
-      "id" : 1,
-      "runtime_data" : [],
-      "primitives" : [
-        {
-          "op" : "mark_to_drop",
-          "parameters" : [
-            {
-              "type" : "header",
-              "value" : "standard_metadata"
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 134,
+            "line" : 135,
             "column" : 8,
             "source_fragment" : "mark_to_drop(standard_metadata)"
           }
@@ -590,7 +547,7 @@
     },
     {
       "name" : "MyIngress.compute_tcp_length",
-      "id" : 2,
+      "id" : 1,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -609,12 +566,60 @@
                   "left" : {
                     "type" : "expression",
                     "value" : {
-                      "op" : "-",
+                      "op" : "<<",
                       "left" : {
-                        "type" : "field",
-                        "value" : ["ipv4", "totalLen"]
+                        "type" : "expression",
+                        "value" : {
+                          "op" : "&",
+                          "left" : {
+                            "type" : "field",
+                            "value" : ["tcp", "dataOffset"]
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0xffff"
+                          }
+                        }
                       },
                       "right" : {
+                        "type" : "hexstr",
+                        "value" : "0x2"
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 148,
+            "column" : 1,
+            "source_fragment" : "meta.tcpLength = ((bit<16>) hdr.tcp.dataOffset * 4"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "userMetadata.tcpLength"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "+",
+                      "left" : {
                         "type" : "expression",
                         "value" : {
                           "op" : "&",
@@ -628,7 +633,7 @@
                                   "op" : "&",
                                   "left" : {
                                     "type" : "field",
-                                    "value" : ["ipv4", "ihl"]
+                                    "value" : ["tcp", "dataOffset"]
                                   },
                                   "right" : {
                                     "type" : "hexstr",
@@ -639,6 +644,140 @@
                               "right" : {
                                 "type" : "hexstr",
                                 "value" : "0x2"
+                              }
+                            }
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0xffff"
+                          }
+                        }
+                      },
+                      "right" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : "&",
+                          "left" : {
+                            "type" : "expression",
+                            "value" : {
+                              "op" : "&",
+                              "left" : {
+                                "type" : "expression",
+                                "value" : {
+                                  "op" : "&",
+                                  "left" : {
+                                    "type" : "expression",
+                                    "value" : {
+                                      "op" : "&",
+                                      "left" : {
+                                        "type" : "expression",
+                                        "value" : {
+                                          "op" : "-",
+                                          "left" : {
+                                            "type" : "field",
+                                            "value" : ["ipv4", "totalLen"]
+                                          },
+                                          "right" : {
+                                            "type" : "expression",
+                                            "value" : {
+                                              "op" : "&",
+                                              "left" : {
+                                                "type" : "expression",
+                                                "value" : {
+                                                  "op" : "+",
+                                                  "left" : {
+                                                    "type" : "expression",
+                                                    "value" : {
+                                                      "op" : "&",
+                                                      "left" : {
+                                                        "type" : "expression",
+                                                        "value" : {
+                                                          "op" : "<<",
+                                                          "left" : {
+                                                            "type" : "expression",
+                                                            "value" : {
+                                                              "op" : "&",
+                                                              "left" : {
+                                                                "type" : "field",
+                                                                "value" : ["ipv4", "ihl"]
+                                                              },
+                                                              "right" : {
+                                                                "type" : "hexstr",
+                                                                "value" : "0xffff"
+                                                              }
+                                                            }
+                                                          },
+                                                          "right" : {
+                                                            "type" : "hexstr",
+                                                            "value" : "0x2"
+                                                          }
+                                                        }
+                                                      },
+                                                      "right" : {
+                                                        "type" : "hexstr",
+                                                        "value" : "0xffff"
+                                                      }
+                                                    }
+                                                  },
+                                                  "right" : {
+                                                    "type" : "expression",
+                                                    "value" : {
+                                                      "op" : "&",
+                                                      "left" : {
+                                                        "type" : "expression",
+                                                        "value" : {
+                                                          "op" : "<<",
+                                                          "left" : {
+                                                            "type" : "expression",
+                                                            "value" : {
+                                                              "op" : "&",
+                                                              "left" : {
+                                                                "type" : "field",
+                                                                "value" : ["tcp", "dataOffset"]
+                                                              },
+                                                              "right" : {
+                                                                "type" : "hexstr",
+                                                                "value" : "0xffff"
+                                                              }
+                                                            }
+                                                          },
+                                                          "right" : {
+                                                            "type" : "hexstr",
+                                                            "value" : "0x2"
+                                                          }
+                                                        }
+                                                      },
+                                                      "right" : {
+                                                        "type" : "hexstr",
+                                                        "value" : "0xffff"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "right" : {
+                                                "type" : "hexstr",
+                                                "value" : "0xffff"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "right" : {
+                                        "type" : "hexstr",
+                                        "value" : "0xffff"
+                                      }
+                                    }
+                                  },
+                                  "right" : {
+                                    "type" : "hexstr",
+                                    "value" : "0xffffffff"
+                                  }
+                                }
+                              },
+                              "right" : {
+                                "type" : "hexstr",
+                                "value" : "0x0000ffff"
                               }
                             }
                           },
@@ -660,16 +799,368 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 147,
-            "column" : 8,
-            "source_fragment" : "meta.tcpLength = tcpLength"
+            "line" : 150,
+            "column" : 1,
+            "source_fragment" : "meta.tcpLength = meta.tcpLength + (bit<16>)payLoadLen"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "userMetadata.totalLength"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "-",
+                      "left" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : "&",
+                          "left" : {
+                            "type" : "field",
+                            "value" : ["ipv4", "totalLen"]
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0xffffffff"
+                          }
+                        }
+                      },
+                      "right" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : "&",
+                          "left" : {
+                            "type" : "expression",
+                            "value" : {
+                              "op" : "&",
+                              "left" : {
+                                "type" : "expression",
+                                "value" : {
+                                  "op" : "-",
+                                  "left" : {
+                                    "type" : "field",
+                                    "value" : ["ipv4", "totalLen"]
+                                  },
+                                  "right" : {
+                                    "type" : "expression",
+                                    "value" : {
+                                      "op" : "&",
+                                      "left" : {
+                                        "type" : "expression",
+                                        "value" : {
+                                          "op" : "+",
+                                          "left" : {
+                                            "type" : "expression",
+                                            "value" : {
+                                              "op" : "&",
+                                              "left" : {
+                                                "type" : "expression",
+                                                "value" : {
+                                                  "op" : "<<",
+                                                  "left" : {
+                                                    "type" : "expression",
+                                                    "value" : {
+                                                      "op" : "&",
+                                                      "left" : {
+                                                        "type" : "field",
+                                                        "value" : ["ipv4", "ihl"]
+                                                      },
+                                                      "right" : {
+                                                        "type" : "hexstr",
+                                                        "value" : "0xffff"
+                                                      }
+                                                    }
+                                                  },
+                                                  "right" : {
+                                                    "type" : "hexstr",
+                                                    "value" : "0x2"
+                                                  }
+                                                }
+                                              },
+                                              "right" : {
+                                                "type" : "hexstr",
+                                                "value" : "0xffff"
+                                              }
+                                            }
+                                          },
+                                          "right" : {
+                                            "type" : "expression",
+                                            "value" : {
+                                              "op" : "&",
+                                              "left" : {
+                                                "type" : "expression",
+                                                "value" : {
+                                                  "op" : "<<",
+                                                  "left" : {
+                                                    "type" : "expression",
+                                                    "value" : {
+                                                      "op" : "&",
+                                                      "left" : {
+                                                        "type" : "field",
+                                                        "value" : ["tcp", "dataOffset"]
+                                                      },
+                                                      "right" : {
+                                                        "type" : "hexstr",
+                                                        "value" : "0xffff"
+                                                      }
+                                                    }
+                                                  },
+                                                  "right" : {
+                                                    "type" : "hexstr",
+                                                    "value" : "0x2"
+                                                  }
+                                                }
+                                              },
+                                              "right" : {
+                                                "type" : "hexstr",
+                                                "value" : "0xffff"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "right" : {
+                                        "type" : "hexstr",
+                                        "value" : "0xffff"
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "right" : {
+                                "type" : "hexstr",
+                                "value" : "0xffff"
+                              }
+                            }
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0xffffffff"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 151,
+            "column" : 1,
+            "source_fragment" : "meta.totalLength = (bit<32>)hdr.ipv4.totalLen - payLoadLen"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ipv4", "protocol"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x06"
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 6,
+            "column" : 24,
+            "source_fragment" : "6; ..."
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ethernet", "etherType"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x0800"
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 5,
+            "column" : 26,
+            "source_fragment" : "0x800; ..."
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "ackNo"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "+",
+                      "left" : {
+                        "type" : "field",
+                        "value" : ["tcp", "ackNo"]
+                      },
+                      "right" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : "&",
+                          "left" : {
+                            "type" : "expression",
+                            "value" : {
+                              "op" : "&",
+                              "left" : {
+                                "type" : "expression",
+                                "value" : {
+                                  "op" : "-",
+                                  "left" : {
+                                    "type" : "field",
+                                    "value" : ["ipv4", "totalLen"]
+                                  },
+                                  "right" : {
+                                    "type" : "expression",
+                                    "value" : {
+                                      "op" : "&",
+                                      "left" : {
+                                        "type" : "expression",
+                                        "value" : {
+                                          "op" : "+",
+                                          "left" : {
+                                            "type" : "expression",
+                                            "value" : {
+                                              "op" : "&",
+                                              "left" : {
+                                                "type" : "expression",
+                                                "value" : {
+                                                  "op" : "<<",
+                                                  "left" : {
+                                                    "type" : "expression",
+                                                    "value" : {
+                                                      "op" : "&",
+                                                      "left" : {
+                                                        "type" : "field",
+                                                        "value" : ["ipv4", "ihl"]
+                                                      },
+                                                      "right" : {
+                                                        "type" : "hexstr",
+                                                        "value" : "0xffff"
+                                                      }
+                                                    }
+                                                  },
+                                                  "right" : {
+                                                    "type" : "hexstr",
+                                                    "value" : "0x2"
+                                                  }
+                                                }
+                                              },
+                                              "right" : {
+                                                "type" : "hexstr",
+                                                "value" : "0xffff"
+                                              }
+                                            }
+                                          },
+                                          "right" : {
+                                            "type" : "expression",
+                                            "value" : {
+                                              "op" : "&",
+                                              "left" : {
+                                                "type" : "expression",
+                                                "value" : {
+                                                  "op" : "<<",
+                                                  "left" : {
+                                                    "type" : "expression",
+                                                    "value" : {
+                                                      "op" : "&",
+                                                      "left" : {
+                                                        "type" : "field",
+                                                        "value" : ["tcp", "dataOffset"]
+                                                      },
+                                                      "right" : {
+                                                        "type" : "hexstr",
+                                                        "value" : "0xffff"
+                                                      }
+                                                    }
+                                                  },
+                                                  "right" : {
+                                                    "type" : "hexstr",
+                                                    "value" : "0x2"
+                                                  }
+                                                }
+                                              },
+                                              "right" : {
+                                                "type" : "hexstr",
+                                                "value" : "0xffff"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "right" : {
+                                        "type" : "hexstr",
+                                        "value" : "0xffff"
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "right" : {
+                                "type" : "hexstr",
+                                "value" : "0xffff"
+                              }
+                            }
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0xffffffff"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 156,
+            "column" : 1,
+            "source_fragment" : "hdr.tcp.ackNo = hdr.tcp.ackNo + payLoadLen"
           }
         }
       ]
     },
     {
       "name" : "MyIngress.compute_hashes",
-      "id" : 3,
+      "id" : 2,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -686,7 +1177,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 151,
+            "line" : 160,
             "column" : 59,
             "source_fragment" : "ipAddr1"
           }
@@ -705,7 +1196,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 152,
+            "line" : 161,
             "column" : 55,
             "source_fragment" : "port1"
           }
@@ -724,7 +1215,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 153,
+            "line" : 162,
             "column" : 55,
             "source_fragment" : "hdr.ipv4.protocol"
           }
@@ -751,7 +1242,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 151,
+            "line" : 160,
             "column" : 7,
             "source_fragment" : "hash(reg_pos_syn, HashAlgorithm.crc16, (bit<32>)0, {ipAddr1, ..."
           }
@@ -770,7 +1261,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 155,
+            "line" : 164,
             "column" : 60,
             "source_fragment" : "ipAddr1"
           }
@@ -789,7 +1280,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 156,
+            "line" : 165,
             "column" : 55,
             "source_fragment" : "port1"
           }
@@ -808,7 +1299,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 157,
+            "line" : 166,
             "column" : 55,
             "source_fragment" : "hdr.ipv4.protocol"
           }
@@ -835,7 +1326,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 155,
+            "line" : 164,
             "column" : 7,
             "source_fragment" : "hash(reg_pos_conn, HashAlgorithm.crc16, (bit<32>)0, {ipAddr1, ..."
           }
@@ -844,7 +1335,7 @@
     },
     {
       "name" : "MyIngress.send_back",
-      "id" : 4,
+      "id" : 3,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -861,7 +1352,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 163,
+            "line" : 172,
             "column" : 8,
             "source_fragment" : "tmp = hdr.ethernet.dstAddr"
           }
@@ -880,7 +1371,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 164,
+            "line" : 173,
             "column" : 8,
             "source_fragment" : "hdr.ethernet.dstAddr = hdr.ethernet.srcAddr"
           }
@@ -899,7 +1390,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 165,
+            "line" : 174,
             "column" : 8,
             "source_fragment" : "hdr.ethernet.srcAddr = tmp"
           }
@@ -918,51 +1409,9 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 166,
+            "line" : 175,
             "column" : 8,
             "source_fragment" : "standard_metadata.egress_spec = standard_metadata.ingress_port"
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["ipv4", "ttl"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "&",
-                  "left" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : "+",
-                      "left" : {
-                        "type" : "field",
-                        "value" : ["ipv4", "ttl"]
-                      },
-                      "right" : {
-                        "type" : "hexstr",
-                        "value" : "0xff"
-                      }
-                    }
-                  },
-                  "right" : {
-                    "type" : "hexstr",
-                    "value" : "0xff"
-                  }
-                }
-              }
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 167,
-            "column" : 1,
-            "source_fragment" : "hdr.ipv4.ttl = hdr.ipv4.ttl - 1"
           }
         },
         {
@@ -979,7 +1428,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 169,
+            "line" : 178,
             "column" : 8,
             "source_fragment" : "bit<32> clientAddr = hdr.ipv4.srcAddr;"
           }
@@ -998,7 +1447,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 171,
+            "line" : 180,
             "column" : 8,
             "source_fragment" : "hdr.ipv4.srcAddr = serverAddr"
           }
@@ -1017,9 +1466,187 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 172,
+            "line" : 181,
             "column" : 8,
             "source_fragment" : "hdr.ipv4.dstAddr = clientAddr"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "MyIngress.create_ack_response",
+      "id" : 4,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "serverPort_0"]
+            },
+            {
+              "type" : "field",
+              "value" : ["tcp", "dstPort"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 189,
+            "column" : 8,
+            "source_fragment" : "bit<16> serverPort = hdr.tcp.dstPort;"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "dstPort"]
+            },
+            {
+              "type" : "field",
+              "value" : ["tcp", "srcPort"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 190,
+            "column" : 8,
+            "source_fragment" : "hdr.tcp.dstPort = clientPort"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "srcPort"]
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "serverPort_0"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 191,
+            "column" : 8,
+            "source_fragment" : "hdr.tcp.srcPort = serverPort"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "syn"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00"
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 194,
+            "column" : 1,
+            "source_fragment" : "hdr.tcp.syn = 0"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "ack"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x01"
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 195,
+            "column" : 1,
+            "source_fragment" : "hdr.tcp.ack = 1"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "psh"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00"
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 196,
+            "column" : 1,
+            "source_fragment" : "hdr.tcp.psh = 0"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "seq_0"]
+            },
+            {
+              "type" : "field",
+              "value" : ["tcp", "seqNo"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 198,
+            "column" : 1,
+            "source_fragment" : "bit <32> seq = hdr.tcp.seqNo;"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "seqNo"]
+            },
+            {
+              "type" : "field",
+              "value" : ["tcp", "ackNo"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 199,
+            "column" : 1,
+            "source_fragment" : "hdr.tcp.seqNo = hdr.tcp.ackNo"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "ackNo"]
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "seq_0"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 200,
+            "column" : 1,
+            "source_fragment" : "hdr.tcp.ackNo = seq"
           }
         }
       ]
@@ -1043,7 +1670,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 180,
+            "line" : 189,
             "column" : 8,
             "source_fragment" : "bit<16> serverPort = hdr.tcp.dstPort;"
           }
@@ -1062,7 +1689,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 181,
+            "line" : 190,
             "column" : 8,
             "source_fragment" : "hdr.tcp.dstPort = clientPort"
           }
@@ -1081,7 +1708,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 182,
+            "line" : 191,
             "column" : 8,
             "source_fragment" : "hdr.tcp.srcPort = serverPort"
           }
@@ -1100,7 +1727,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 185,
+            "line" : 194,
             "column" : 1,
             "source_fragment" : "hdr.tcp.syn = 0"
           }
@@ -1119,7 +1746,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 186,
+            "line" : 195,
             "column" : 1,
             "source_fragment" : "hdr.tcp.ack = 1"
           }
@@ -1138,7 +1765,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 187,
+            "line" : 196,
             "column" : 1,
             "source_fragment" : "hdr.tcp.psh = 0"
           }
@@ -1157,7 +1784,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 189,
+            "line" : 198,
             "column" : 1,
             "source_fragment" : "bit <32> seq = hdr.tcp.seqNo;"
           }
@@ -1176,7 +1803,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 190,
+            "line" : 199,
             "column" : 1,
             "source_fragment" : "hdr.tcp.seqNo = hdr.tcp.ackNo"
           }
@@ -1189,44 +1816,21 @@
               "value" : ["tcp", "ackNo"]
             },
             {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "&",
-                  "left" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : "+",
-                      "left" : {
-                        "type" : "field",
-                        "value" : ["scalars", "seq_0"]
-                      },
-                      "right" : {
-                        "type" : "hexstr",
-                        "value" : "0x00000001"
-                      }
-                    }
-                  },
-                  "right" : {
-                    "type" : "hexstr",
-                    "value" : "0xffffffff"
-                  }
-                }
-              }
+              "type" : "field",
+              "value" : ["scalars", "seq_0"]
             }
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 191,
+            "line" : 200,
             "column" : 1,
-            "source_fragment" : "hdr.tcp.ackNo = seq + 1"
+            "source_fragment" : "hdr.tcp.ackNo = seq"
           }
         }
       ]
     },
     {
-      "name" : "MyIngress.create_syn_ack_response",
+      "name" : "MyIngress.create_ack_response",
       "id" : 6,
       "runtime_data" : [],
       "primitives" : [
@@ -1235,26 +1839,7 @@
           "parameters" : [
             {
               "type" : "field",
-              "value" : ["scalars", "clientPort_1"]
-            },
-            {
-              "type" : "field",
-              "value" : ["tcp", "srcPort"]
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 204,
-            "column" : 8,
-            "source_fragment" : "bit<16> clientPort = hdr.tcp.srcPort;"
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "serverPort_1"]
+              "value" : ["scalars", "serverPort_0"]
             },
             {
               "type" : "field",
@@ -1263,7 +1848,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 205,
+            "line" : 189,
             "column" : 8,
             "source_fragment" : "bit<16> serverPort = hdr.tcp.dstPort;"
           }
@@ -1282,7 +1867,230 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 206,
+            "line" : 190,
+            "column" : 8,
+            "source_fragment" : "hdr.tcp.dstPort = clientPort"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "srcPort"]
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "serverPort_0"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 191,
+            "column" : 8,
+            "source_fragment" : "hdr.tcp.srcPort = serverPort"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "syn"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00"
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 194,
+            "column" : 1,
+            "source_fragment" : "hdr.tcp.syn = 0"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "ack"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x01"
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 195,
+            "column" : 1,
+            "source_fragment" : "hdr.tcp.ack = 1"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "psh"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00"
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 196,
+            "column" : 1,
+            "source_fragment" : "hdr.tcp.psh = 0"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "seq_0"]
+            },
+            {
+              "type" : "field",
+              "value" : ["tcp", "seqNo"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 198,
+            "column" : 1,
+            "source_fragment" : "bit <32> seq = hdr.tcp.seqNo;"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "seqNo"]
+            },
+            {
+              "type" : "field",
+              "value" : ["tcp", "ackNo"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 199,
+            "column" : 1,
+            "source_fragment" : "hdr.tcp.seqNo = hdr.tcp.ackNo"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "ackNo"]
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "seq_0"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 200,
+            "column" : 1,
+            "source_fragment" : "hdr.tcp.ackNo = seq"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "MyIngress.set_fin",
+      "id" : 7,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "fin"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x01"
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 204,
+            "column" : 1,
+            "source_fragment" : "hdr.tcp.fin = 1"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "MyIngress.create_syn_ack_response",
+      "id" : 8,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "clientPort_1"]
+            },
+            {
+              "type" : "field",
+              "value" : ["tcp", "srcPort"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 217,
+            "column" : 8,
+            "source_fragment" : "bit<16> clientPort = hdr.tcp.srcPort;"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "serverPort_1"]
+            },
+            {
+              "type" : "field",
+              "value" : ["tcp", "dstPort"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 218,
+            "column" : 8,
+            "source_fragment" : "bit<16> serverPort = hdr.tcp.dstPort;"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["tcp", "dstPort"]
+            },
+            {
+              "type" : "field",
+              "value" : ["tcp", "srcPort"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 219,
             "column" : 8,
             "source_fragment" : "hdr.tcp.dstPort = clientPort"
           }
@@ -1301,7 +2109,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 207,
+            "line" : 220,
             "column" : 8,
             "source_fragment" : "hdr.tcp.srcPort = serverPort"
           }
@@ -1320,7 +2128,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 210,
+            "line" : 223,
             "column" : 8,
             "source_fragment" : "hdr.tcp.syn = 1"
           }
@@ -1339,7 +2147,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 211,
+            "line" : 224,
             "column" : 8,
             "source_fragment" : "hdr.tcp.ack = 1"
           }
@@ -1381,7 +2189,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 214,
+            "line" : 227,
             "column" : 1,
             "source_fragment" : "hdr.tcp.ackNo = hdr.tcp.seqNo + 1"
           }
@@ -1400,7 +2208,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 222,
+            "line" : 235,
             "column" : 7,
             "source_fragment" : "clientAddr"
           }
@@ -1419,7 +2227,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 223,
+            "line" : 236,
             "column" : 14,
             "source_fragment" : "clientPort"
           }
@@ -1438,7 +2246,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 224,
+            "line" : 237,
             "column" : 14,
             "source_fragment" : "time"
           }
@@ -1465,7 +2273,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 219,
+            "line" : 232,
             "column" : 1,
             "source_fragment" : "hash(hash_value, ..."
           }
@@ -1507,7 +2315,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 227,
+            "line" : 240,
             "column" : 8,
             "source_fragment" : "hdr.tcp.seqNo = seqNo + 1000"
           }
@@ -1549,7 +2357,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 229,
+            "line" : 242,
             "column" : 1,
             "source_fragment" : "hdr.tcp.window = hdr.tcp.window + 1000"
           }
@@ -1557,339 +2365,8 @@
       ]
     },
     {
-      "name" : "MyIngress.create_syn_ack_response",
-      "id" : 7,
-      "runtime_data" : [],
-      "primitives" : [
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "clientPort_1"]
-            },
-            {
-              "type" : "field",
-              "value" : ["tcp", "srcPort"]
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 204,
-            "column" : 8,
-            "source_fragment" : "bit<16> clientPort = hdr.tcp.srcPort;"
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "serverPort_1"]
-            },
-            {
-              "type" : "field",
-              "value" : ["tcp", "dstPort"]
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 205,
-            "column" : 8,
-            "source_fragment" : "bit<16> serverPort = hdr.tcp.dstPort;"
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["tcp", "dstPort"]
-            },
-            {
-              "type" : "field",
-              "value" : ["tcp", "srcPort"]
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 206,
-            "column" : 8,
-            "source_fragment" : "hdr.tcp.dstPort = clientPort"
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["tcp", "srcPort"]
-            },
-            {
-              "type" : "field",
-              "value" : ["scalars", "serverPort_1"]
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 207,
-            "column" : 8,
-            "source_fragment" : "hdr.tcp.srcPort = serverPort"
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["tcp", "syn"]
-            },
-            {
-              "type" : "hexstr",
-              "value" : "0x01"
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 210,
-            "column" : 8,
-            "source_fragment" : "hdr.tcp.syn = 1"
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["tcp", "ack"]
-            },
-            {
-              "type" : "hexstr",
-              "value" : "0x01"
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 211,
-            "column" : 8,
-            "source_fragment" : "hdr.tcp.ack = 1"
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["tcp", "ackNo"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "&",
-                  "left" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : "+",
-                      "left" : {
-                        "type" : "field",
-                        "value" : ["tcp", "seqNo"]
-                      },
-                      "right" : {
-                        "type" : "hexstr",
-                        "value" : "0x00000001"
-                      }
-                    }
-                  },
-                  "right" : {
-                    "type" : "hexstr",
-                    "value" : "0xffffffff"
-                  }
-                }
-              }
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 214,
-            "column" : 1,
-            "source_fragment" : "hdr.tcp.ackNo = hdr.tcp.seqNo + 1"
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "tmp_9"]
-            },
-            {
-              "type" : "field",
-              "value" : ["ipv4", "srcAddr"]
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 222,
-            "column" : 7,
-            "source_fragment" : "clientAddr"
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "tmp_10"]
-            },
-            {
-              "type" : "field",
-              "value" : ["scalars", "clientPort_1"]
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 223,
-            "column" : 14,
-            "source_fragment" : "clientPort"
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "tmp_11"]
-            },
-            {
-              "type" : "hexstr",
-              "value" : "0x0f"
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 224,
-            "column" : 14,
-            "source_fragment" : "time"
-          }
-        },
-        {
-          "op" : "modify_field_with_hash_based_offset",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "hash_value_0"]
-            },
-            {
-              "type" : "hexstr",
-              "value" : "0x00000000"
-            },
-            {
-              "type" : "calculation",
-              "value" : "calc_2"
-            },
-            {
-              "type" : "hexstr",
-              "value" : "0x00000022"
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 219,
-            "column" : 1,
-            "source_fragment" : "hash(hash_value, ..."
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["tcp", "seqNo"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "&",
-                  "left" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : "+",
-                      "left" : {
-                        "type" : "field",
-                        "value" : ["tcp", "seqNo"]
-                      },
-                      "right" : {
-                        "type" : "hexstr",
-                        "value" : "0x000003e8"
-                      }
-                    }
-                  },
-                  "right" : {
-                    "type" : "hexstr",
-                    "value" : "0xffffffff"
-                  }
-                }
-              }
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 227,
-            "column" : 8,
-            "source_fragment" : "hdr.tcp.seqNo = seqNo + 1000"
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["tcp", "window"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "&",
-                  "left" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : "+",
-                      "left" : {
-                        "type" : "field",
-                        "value" : ["tcp", "window"]
-                      },
-                      "right" : {
-                        "type" : "hexstr",
-                        "value" : "0x03e8"
-                      }
-                    }
-                  },
-                  "right" : {
-                    "type" : "hexstr",
-                    "value" : "0xffff"
-                  }
-                }
-              }
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 229,
-            "column" : 1,
-            "source_fragment" : "hdr.tcp.window = hdr.tcp.window + 1000"
-          }
-        }
-      ]
-    },
-    {
-      "name" : "basic240",
-      "id" : 8,
+      "name" : "basic253",
+      "id" : 9,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1906,7 +2383,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 240,
+            "line" : 253,
             "column" : 3,
             "source_fragment" : "meta.is_connection_established = 1"
           }
@@ -1914,8 +2391,8 @@
       ]
     },
     {
-      "name" : "basic243",
-      "id" : 9,
+      "name" : "basic256",
+      "id" : 10,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1932,7 +2409,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 243,
+            "line" : 256,
             "column" : 3,
             "source_fragment" : "meta.is_connection_established = 0"
           }
@@ -1940,8 +2417,8 @@
       ]
     },
     {
-      "name" : "basic237",
-      "id" : 10,
+      "name" : "basic250",
+      "id" : 11,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1962,7 +2439,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 237,
+            "line" : 250,
             "column" : 2,
             "source_fragment" : "bloom_filter_conn.read(reg_val_conn, reg_pos_conn)"
           }
@@ -1970,170 +2447,8 @@
       ]
     },
     {
-      "name" : "basic252",
-      "id" : 11,
-      "runtime_data" : [],
-      "primitives" : [
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "hasReturned"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "b2d",
-                  "left" : null,
-                  "right" : {
-                    "type" : "bool",
-                    "value" : true
-                  }
-                }
-              }
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 252,
-            "column" : 4,
-            "source_fragment" : "return"
-          }
-        }
-      ]
-    },
-    {
-      "name" : "basic258",
+      "name" : "basic266",
       "id" : 12,
-      "runtime_data" : [],
-      "primitives" : [
-        {
-          "op" : "register_write",
-          "parameters" : [
-            {
-              "type" : "register_array",
-              "value" : "MyIngress.bloom_filter_syn"
-            },
-            {
-              "type" : "field",
-              "value" : ["scalars", "reg_pos_syn_0"]
-            },
-            {
-              "type" : "hexstr",
-              "value" : "0x01"
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 258,
-            "column" : 4,
-            "source_fragment" : "bloom_filter_syn.write(reg_pos_syn, 1)"
-          }
-        }
-      ]
-    },
-    {
-      "name" : "basic265",
-      "id" : 13,
-      "runtime_data" : [],
-      "primitives" : [
-        {
-          "op" : "register_write",
-          "parameters" : [
-            {
-              "type" : "register_array",
-              "value" : "MyIngress.bloom_filter_conn"
-            },
-            {
-              "type" : "field",
-              "value" : ["scalars", "reg_pos_conn_0"]
-            },
-            {
-              "type" : "hexstr",
-              "value" : "0x01"
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 265,
-            "column" : 5,
-            "source_fragment" : "bloom_filter_conn.write(reg_pos_conn, 1)"
-          }
-        }
-      ]
-    },
-    {
-      "name" : "basic270",
-      "id" : 14,
-      "runtime_data" : [],
-      "primitives" : [
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "hasReturned"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "b2d",
-                  "left" : null,
-                  "right" : {
-                    "type" : "bool",
-                    "value" : true
-                  }
-                }
-              }
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 270,
-            "column" : 5,
-            "source_fragment" : "return"
-          }
-        }
-      ]
-    },
-    {
-      "name" : "basic262",
-      "id" : 15,
-      "runtime_data" : [],
-      "primitives" : [
-        {
-          "op" : "register_read",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "reg_val_syn_0"]
-            },
-            {
-              "type" : "register_array",
-              "value" : "MyIngress.bloom_filter_syn"
-            },
-            {
-              "type" : "field",
-              "value" : ["scalars", "reg_pos_syn_0"]
-            }
-          ],
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 262,
-            "column" : 4,
-            "source_fragment" : "bloom_filter_syn.read(reg_val_syn, reg_pos_syn)"
-          }
-        }
-      ]
-    },
-    {
-      "name" : "basic275",
-      "id" : 16,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -2154,8 +2469,8 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 275,
-            "column" : 4,
+            "line" : 266,
+            "column" : 32,
             "source_fragment" : "bloom_filter_syn.write(reg_pos_syn, 0)"
           }
         },
@@ -2177,15 +2492,170 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 276,
-            "column" : 4,
+            "line" : 267,
+            "column" : 32,
             "source_fragment" : "bloom_filter_conn.write(reg_pos_conn, 0)"
           }
         }
       ]
     },
     {
-      "name" : "basic280",
+      "name" : "basic271",
+      "id" : 13,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "hasReturned"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "b2d",
+                  "left" : null,
+                  "right" : {
+                    "type" : "bool",
+                    "value" : true
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 271,
+            "column" : 4,
+            "source_fragment" : "return"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "basic277",
+      "id" : 14,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "register_write",
+          "parameters" : [
+            {
+              "type" : "register_array",
+              "value" : "MyIngress.bloom_filter_syn"
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "reg_pos_syn_0"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x01"
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 277,
+            "column" : 4,
+            "source_fragment" : "bloom_filter_syn.write(reg_pos_syn, 1)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "basic284",
+      "id" : 15,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "register_write",
+          "parameters" : [
+            {
+              "type" : "register_array",
+              "value" : "MyIngress.bloom_filter_conn"
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "reg_pos_conn_0"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x01"
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 284,
+            "column" : 5,
+            "source_fragment" : "bloom_filter_conn.write(reg_pos_conn, 1)"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "hasReturned"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "b2d",
+                  "left" : null,
+                  "right" : {
+                    "type" : "bool",
+                    "value" : true
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 285,
+            "column" : 5,
+            "source_fragment" : "return"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "basic281",
+      "id" : 16,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "register_read",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "reg_val_syn_0"]
+            },
+            {
+              "type" : "register_array",
+              "value" : "MyIngress.bloom_filter_syn"
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "reg_pos_syn_0"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 281,
+            "column" : 4,
+            "source_fragment" : "bloom_filter_syn.read(reg_val_syn, reg_pos_syn)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "basic296",
       "id" : 17,
       "runtime_data" : [],
       "primitives" : [
@@ -2213,7 +2683,7 @@
           ],
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 280,
+            "line" : 296,
             "column" : 4,
             "source_fragment" : "return"
           }
@@ -2257,7 +2727,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "basic.p4",
-        "line" : 124,
+        "line" : 125,
         "column" : 8,
         "source_fragment" : "MyIngress"
       },
@@ -2291,7 +2761,7 @@
           "id" : 1,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 236,
+            "line" : 249,
             "column" : 2,
             "source_fragment" : "compute_hashes(hdr.ipv4.srcAddr, hdr.tcp.srcPort)"
           },
@@ -2302,25 +2772,25 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [3],
+          "action_ids" : [2],
           "actions" : ["MyIngress.compute_hashes"],
-          "base_default_next" : "tbl_basic237",
+          "base_default_next" : "tbl_basic250",
           "next_tables" : {
-            "MyIngress.compute_hashes" : "tbl_basic237"
+            "MyIngress.compute_hashes" : "tbl_basic250"
           },
           "default_entry" : {
-            "action_id" : 3,
+            "action_id" : 2,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
           }
         },
         {
-          "name" : "tbl_basic237",
+          "name" : "tbl_basic250",
           "id" : 2,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 237,
+            "line" : 250,
             "column" : 2,
             "source_fragment" : "bloom_filter_conn.read(reg_val_conn, reg_pos_conn)"
           },
@@ -2331,54 +2801,25 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [10],
-          "actions" : ["basic237"],
+          "action_ids" : [11],
+          "actions" : ["basic250"],
           "base_default_next" : "node_6",
           "next_tables" : {
-            "basic237" : "node_6"
+            "basic250" : "node_6"
           },
           "default_entry" : {
-            "action_id" : 10,
+            "action_id" : 11,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
           }
         },
         {
-          "name" : "tbl_basic240",
+          "name" : "tbl_basic253",
           "id" : 3,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 240,
-            "column" : 34,
-            "source_fragment" : "="
-          },
-          "key" : [],
-          "match_type" : "exact",
-          "type" : "simple",
-          "max_size" : 1024,
-          "with_counters" : false,
-          "support_timeout" : false,
-          "direct_meters" : null,
-          "action_ids" : [8],
-          "actions" : ["basic240"],
-          "base_default_next" : "node_9",
-          "next_tables" : {
-            "basic240" : "node_9"
-          },
-          "default_entry" : {
-            "action_id" : 8,
-            "action_const" : true,
-            "action_data" : [],
-            "action_entry_const" : true
-          }
-        },
-        {
-          "name" : "tbl_basic243",
-          "id" : 4,
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 243,
+            "line" : 253,
             "column" : 34,
             "source_fragment" : "="
           },
@@ -2390,13 +2831,42 @@
           "support_timeout" : false,
           "direct_meters" : null,
           "action_ids" : [9],
-          "actions" : ["basic243"],
+          "actions" : ["basic253"],
           "base_default_next" : "node_9",
           "next_tables" : {
-            "basic243" : "node_9"
+            "basic253" : "node_9"
           },
           "default_entry" : {
             "action_id" : 9,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_basic256",
+          "id" : 4,
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 256,
+            "column" : 34,
+            "source_fragment" : "="
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [10],
+          "actions" : ["basic256"],
+          "base_default_next" : "node_9",
+          "next_tables" : {
+            "basic256" : "node_9"
+          },
+          "default_entry" : {
+            "action_id" : 10,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -2407,8 +2877,95 @@
           "id" : 5,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 250,
+            "line" : 263,
             "column" : 24,
+            "source_fragment" : "create_ack_response()"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [4],
+          "actions" : ["MyIngress.create_ack_response"],
+          "base_default_next" : "node_28",
+          "next_tables" : {
+            "MyIngress.create_ack_response" : "node_28"
+          },
+          "default_entry" : {
+            "action_id" : 4,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_basic266",
+          "id" : 6,
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 266,
+            "column" : 32,
+            "source_fragment" : "bloom_filter_syn.write(reg_pos_syn, 0); ..."
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [12],
+          "actions" : ["basic266"],
+          "base_default_next" : "tbl_set_fin",
+          "next_tables" : {
+            "basic266" : "tbl_set_fin"
+          },
+          "default_entry" : {
+            "action_id" : 12,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_set_fin",
+          "id" : 7,
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 268,
+            "column" : 32,
+            "source_fragment" : "set_fin()"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [7],
+          "actions" : ["MyIngress.set_fin"],
+          "base_default_next" : "tbl_create_ack_response_0",
+          "next_tables" : {
+            "MyIngress.set_fin" : "tbl_create_ack_response_0"
+          },
+          "default_entry" : {
+            "action_id" : 7,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_create_ack_response_0",
+          "id" : 8,
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 269,
+            "column" : 4,
             "source_fragment" : "create_ack_response()"
           },
           "key" : [],
@@ -2432,11 +2989,11 @@
           }
         },
         {
-          "name" : "tbl_basic252",
-          "id" : 6,
+          "name" : "tbl_basic271",
+          "id" : 9,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 252,
+            "line" : 271,
             "column" : 4,
             "source_fragment" : "return"
           },
@@ -2447,25 +3004,25 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [11],
-          "actions" : ["basic252"],
+          "action_ids" : [13],
+          "actions" : ["basic271"],
           "base_default_next" : "node_28",
           "next_tables" : {
-            "basic252" : "node_28"
+            "basic271" : "node_28"
           },
           "default_entry" : {
-            "action_id" : 11,
+            "action_id" : 13,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
           }
         },
         {
-          "name" : "tbl_basic258",
-          "id" : 7,
+          "name" : "tbl_basic277",
+          "id" : 10,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 258,
+            "line" : 277,
             "column" : 4,
             "source_fragment" : "bloom_filter_syn.write(reg_pos_syn, 1)"
           },
@@ -2476,14 +3033,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [12],
-          "actions" : ["basic258"],
+          "action_ids" : [14],
+          "actions" : ["basic277"],
           "base_default_next" : "tbl_create_syn_ack_response",
           "next_tables" : {
-            "basic258" : "tbl_create_syn_ack_response"
+            "basic277" : "tbl_create_syn_ack_response"
           },
           "default_entry" : {
-            "action_id" : 12,
+            "action_id" : 14,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -2491,10 +3048,10 @@
         },
         {
           "name" : "tbl_create_syn_ack_response",
-          "id" : 8,
+          "id" : 11,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 259,
+            "line" : 278,
             "column" : 4,
             "source_fragment" : "create_syn_ack_response()"
           },
@@ -2505,25 +3062,25 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [6],
+          "action_ids" : [8],
           "actions" : ["MyIngress.create_syn_ack_response"],
           "base_default_next" : "node_28",
           "next_tables" : {
             "MyIngress.create_syn_ack_response" : "node_28"
           },
           "default_entry" : {
-            "action_id" : 6,
+            "action_id" : 8,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
           }
         },
         {
-          "name" : "tbl_basic262",
-          "id" : 9,
+          "name" : "tbl_basic281",
+          "id" : 12,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 262,
+            "line" : 281,
             "column" : 4,
             "source_fragment" : "bloom_filter_syn.read(reg_val_syn, reg_pos_syn)"
           },
@@ -2534,11 +3091,40 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [15],
-          "actions" : ["basic262"],
-          "base_default_next" : "node_19",
+          "action_ids" : [16],
+          "actions" : ["basic281"],
+          "base_default_next" : "node_23",
           "next_tables" : {
-            "basic262" : "node_19"
+            "basic281" : "node_23"
+          },
+          "default_entry" : {
+            "action_id" : 16,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_basic284",
+          "id" : 13,
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 284,
+            "column" : 5,
+            "source_fragment" : "bloom_filter_conn.write(reg_pos_conn, 1); ..."
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [15],
+          "actions" : ["basic284"],
+          "base_default_next" : "node_28",
+          "next_tables" : {
+            "basic284" : "node_28"
           },
           "default_entry" : {
             "action_id" : 15,
@@ -2548,13 +3134,13 @@
           }
         },
         {
-          "name" : "tbl_basic265",
-          "id" : 10,
+          "name" : "tbl_create_ack_response_1",
+          "id" : 14,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 265,
+            "line" : 289,
             "column" : 5,
-            "source_fragment" : "bloom_filter_conn.write(reg_pos_conn, 1)"
+            "source_fragment" : "create_ack_response()"
           },
           "key" : [],
           "match_type" : "exact",
@@ -2563,14 +3149,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [13],
-          "actions" : ["basic265"],
+          "action_ids" : [6],
+          "actions" : ["MyIngress.create_ack_response"],
           "base_default_next" : "node_28",
           "next_tables" : {
-            "basic265" : "node_28"
+            "MyIngress.create_ack_response" : "node_28"
           },
           "default_entry" : {
-            "action_id" : 13,
+            "action_id" : 6,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -2578,11 +3164,11 @@
         },
         {
           "name" : "tbl_drop",
-          "id" : 11,
+          "id" : 15,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 269,
-            "column" : 5,
+            "line" : 295,
+            "column" : 4,
             "source_fragment" : "drop()"
           },
           "key" : [],
@@ -2594,9 +3180,9 @@
           "direct_meters" : null,
           "action_ids" : [0],
           "actions" : ["MyIngress.drop"],
-          "base_default_next" : "tbl_basic270",
+          "base_default_next" : "tbl_basic296",
           "next_tables" : {
-            "MyIngress.drop" : "tbl_basic270"
+            "MyIngress.drop" : "tbl_basic296"
           },
           "default_entry" : {
             "action_id" : 0,
@@ -2606,127 +3192,11 @@
           }
         },
         {
-          "name" : "tbl_basic270",
-          "id" : 12,
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 270,
-            "column" : 5,
-            "source_fragment" : "return"
-          },
-          "key" : [],
-          "match_type" : "exact",
-          "type" : "simple",
-          "max_size" : 1024,
-          "with_counters" : false,
-          "support_timeout" : false,
-          "direct_meters" : null,
-          "action_ids" : [14],
-          "actions" : ["basic270"],
-          "base_default_next" : "node_28",
-          "next_tables" : {
-            "basic270" : "node_28"
-          },
-          "default_entry" : {
-            "action_id" : 14,
-            "action_const" : true,
-            "action_data" : [],
-            "action_entry_const" : true
-          }
-        },
-        {
-          "name" : "tbl_create_syn_ack_response_0",
-          "id" : 13,
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 273,
-            "column" : 8,
-            "source_fragment" : "create_syn_ack_response()"
-          },
-          "key" : [],
-          "match_type" : "exact",
-          "type" : "simple",
-          "max_size" : 1024,
-          "with_counters" : false,
-          "support_timeout" : false,
-          "direct_meters" : null,
-          "action_ids" : [7],
-          "actions" : ["MyIngress.create_syn_ack_response"],
-          "base_default_next" : "tbl_basic275",
-          "next_tables" : {
-            "MyIngress.create_syn_ack_response" : "tbl_basic275"
-          },
-          "default_entry" : {
-            "action_id" : 7,
-            "action_const" : true,
-            "action_data" : [],
-            "action_entry_const" : true
-          }
-        },
-        {
-          "name" : "tbl_basic275",
-          "id" : 14,
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 275,
-            "column" : 4,
-            "source_fragment" : "bloom_filter_syn.write(reg_pos_syn, 0); ..."
-          },
-          "key" : [],
-          "match_type" : "exact",
-          "type" : "simple",
-          "max_size" : 1024,
-          "with_counters" : false,
-          "support_timeout" : false,
-          "direct_meters" : null,
-          "action_ids" : [16],
-          "actions" : ["basic275"],
-          "base_default_next" : "node_28",
-          "next_tables" : {
-            "basic275" : "node_28"
-          },
-          "default_entry" : {
-            "action_id" : 16,
-            "action_const" : true,
-            "action_data" : [],
-            "action_entry_const" : true
-          }
-        },
-        {
-          "name" : "tbl_drop_0",
-          "id" : 15,
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 279,
-            "column" : 4,
-            "source_fragment" : "drop()"
-          },
-          "key" : [],
-          "match_type" : "exact",
-          "type" : "simple",
-          "max_size" : 1024,
-          "with_counters" : false,
-          "support_timeout" : false,
-          "direct_meters" : null,
-          "action_ids" : [1],
-          "actions" : ["MyIngress.drop"],
-          "base_default_next" : "tbl_basic280",
-          "next_tables" : {
-            "MyIngress.drop" : "tbl_basic280"
-          },
-          "default_entry" : {
-            "action_id" : 1,
-            "action_const" : true,
-            "action_data" : [],
-            "action_entry_const" : true
-          }
-        },
-        {
-          "name" : "tbl_basic280",
+          "name" : "tbl_basic296",
           "id" : 16,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 280,
+            "line" : 296,
             "column" : 4,
             "source_fragment" : "return"
           },
@@ -2738,10 +3208,10 @@
           "support_timeout" : false,
           "direct_meters" : null,
           "action_ids" : [17],
-          "actions" : ["basic280"],
+          "actions" : ["basic296"],
           "base_default_next" : "node_28",
           "next_tables" : {
-            "basic280" : "node_28"
+            "basic296" : "node_28"
           },
           "default_entry" : {
             "action_id" : 17,
@@ -2755,7 +3225,7 @@
           "id" : 17,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 287,
+            "line" : 303,
             "column" : 16,
             "source_fragment" : "send_back()"
           },
@@ -2766,14 +3236,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [4],
+          "action_ids" : [3],
           "actions" : ["MyIngress.send_back"],
           "base_default_next" : "tbl_compute_tcp_length",
           "next_tables" : {
             "MyIngress.send_back" : "tbl_compute_tcp_length"
           },
           "default_entry" : {
-            "action_id" : 4,
+            "action_id" : 3,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -2784,7 +3254,7 @@
           "id" : 18,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 292,
+            "line" : 308,
             "column" : 7,
             "source_fragment" : "compute_tcp_length()"
           },
@@ -2795,14 +3265,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [2],
+          "action_ids" : [1],
           "actions" : ["MyIngress.compute_tcp_length"],
           "base_default_next" : null,
           "next_tables" : {
             "MyIngress.compute_tcp_length" : null
           },
           "default_entry" : {
-            "action_id" : 2,
+            "action_id" : 1,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -2816,7 +3286,7 @@
           "id" : 0,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 233,
+            "line" : 246,
             "column" : 5,
             "source_fragment" : "hdr.ipv4.isValid() && hdr.tcp.isValid()"
           },
@@ -2856,7 +3326,7 @@
           "id" : 1,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 238,
+            "line" : 251,
             "column" : 5,
             "source_fragment" : "reg_val_conn == 1"
           },
@@ -2874,15 +3344,15 @@
               }
             }
           },
-          "true_next" : "tbl_basic240",
-          "false_next" : "tbl_basic243"
+          "true_next" : "tbl_basic253",
+          "false_next" : "tbl_basic256"
         },
         {
           "name" : "node_9",
           "id" : 2,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 247,
+            "line" : 260,
             "column" : 20,
             "source_fragment" : "meta.is_connection_established == 1"
           },
@@ -2901,14 +3371,14 @@
             }
           },
           "true_next" : "node_10",
-          "false_next" : "node_14"
+          "false_next" : "node_18"
         },
         {
           "name" : "node_10",
           "id" : 3,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 248,
+            "line" : 261,
             "column" : 6,
             "source_fragment" : "hdr.tcp.psh == 1"
           },
@@ -2934,9 +3404,35 @@
           "id" : 4,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 251,
+            "line" : 264,
             "column" : 14,
-            "source_fragment" : "hdr.tcp.psh != 1 && hdr.tcp.ack == 1"
+            "source_fragment" : "hdr.tcp.fin == 1"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "field",
+                "value" : ["tcp", "fin"]
+              },
+              "right" : {
+                "type" : "hexstr",
+                "value" : "0x01"
+              }
+            }
+          },
+          "true_next" : "tbl_basic266",
+          "false_next" : "node_16"
+        },
+        {
+          "name" : "node_16",
+          "id" : 5,
+          "source_info" : {
+            "filename" : "basic.p4",
+            "line" : 270,
+            "column" : 35,
+            "source_fragment" : "hdr.tcp.psh != 1 && hdr.tcp.fin != 1 && hdr.tcp.ack == 1"
           },
           "expression" : {
             "type" : "expression",
@@ -2945,14 +3441,34 @@
               "left" : {
                 "type" : "expression",
                 "value" : {
-                  "op" : "!=",
+                  "op" : "and",
                   "left" : {
-                    "type" : "field",
-                    "value" : ["tcp", "psh"]
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "!=",
+                      "left" : {
+                        "type" : "field",
+                        "value" : ["tcp", "psh"]
+                      },
+                      "right" : {
+                        "type" : "hexstr",
+                        "value" : "0x01"
+                      }
+                    }
                   },
                   "right" : {
-                    "type" : "hexstr",
-                    "value" : "0x01"
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "!=",
+                      "left" : {
+                        "type" : "field",
+                        "value" : ["tcp", "fin"]
+                      },
+                      "right" : {
+                        "type" : "hexstr",
+                        "value" : "0x01"
+                      }
+                    }
                   }
                 }
               },
@@ -2972,15 +3488,15 @@
               }
             }
           },
-          "true_next" : "tbl_basic252",
+          "true_next" : "tbl_basic271",
           "false_next" : "node_28"
         },
         {
-          "name" : "node_14",
-          "id" : 5,
+          "name" : "node_18",
+          "id" : 6,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 256,
+            "line" : 275,
             "column" : 6,
             "source_fragment" : "hdr.tcp.syn == 1 && hdr.tcp.ack == 0"
           },
@@ -3018,15 +3534,15 @@
               }
             }
           },
-          "true_next" : "tbl_basic258",
-          "false_next" : "node_17"
+          "true_next" : "tbl_basic277",
+          "false_next" : "node_21"
         },
         {
-          "name" : "node_17",
-          "id" : 6,
+          "name" : "node_21",
+          "id" : 7,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 260,
+            "line" : 279,
             "column" : 13,
             "source_fragment" : "hdr.tcp.syn == 0 && hdr.tcp.ack == 1"
           },
@@ -3064,15 +3580,15 @@
               }
             }
           },
-          "true_next" : "tbl_basic262",
-          "false_next" : "node_23"
+          "true_next" : "tbl_basic281",
+          "false_next" : "tbl_drop"
         },
         {
-          "name" : "node_19",
-          "id" : 7,
+          "name" : "node_23",
+          "id" : 8,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 263,
+            "line" : 282,
             "column" : 7,
             "source_fragment" : "reg_val_syn == 1"
           },
@@ -3090,34 +3606,8 @@
               }
             }
           },
-          "true_next" : "tbl_basic265",
-          "false_next" : "tbl_drop"
-        },
-        {
-          "name" : "node_23",
-          "id" : 8,
-          "source_info" : {
-            "filename" : "basic.p4",
-            "line" : 272,
-            "column" : 13,
-            "source_fragment" : "hdr.tcp.fin == 1"
-          },
-          "expression" : {
-            "type" : "expression",
-            "value" : {
-              "op" : "==",
-              "left" : {
-                "type" : "field",
-                "value" : ["tcp", "fin"]
-              },
-              "right" : {
-                "type" : "hexstr",
-                "value" : "0x01"
-              }
-            }
-          },
-          "true_next" : "tbl_create_syn_ack_response_0",
-          "false_next" : "tbl_drop_0"
+          "true_next" : "tbl_basic284",
+          "false_next" : "tbl_create_ack_response_1"
         },
         {
           "name" : "node_28",
@@ -3141,7 +3631,7 @@
           "id" : 10,
           "source_info" : {
             "filename" : "basic.p4",
-            "line" : 286,
+            "line" : 302,
             "column" : 10,
             "source_fragment" : "hdr.ipv4.isValid()"
           },
@@ -3166,7 +3656,7 @@
       "id" : 1,
       "source_info" : {
         "filename" : "basic.p4",
-        "line" : 300,
+        "line" : 316,
         "column" : 8,
         "source_fragment" : "MyEgress"
       },
@@ -3182,13 +3672,13 @@
       "id" : 0,
       "source_info" : {
         "filename" : "basic.p4",
-        "line" : 312,
+        "line" : 328,
         "column" : 1,
         "source_fragment" : "update_checksum( ..."
       },
       "target" : ["ipv4", "hdrChecksum"],
       "type" : "generic",
-      "calculation" : "calc_3",
+      "calculation" : "calc_2",
       "verify" : false,
       "update" : true,
       "if_cond" : {
@@ -3208,13 +3698,13 @@
       "id" : 1,
       "source_info" : {
         "filename" : "basic.p4",
-        "line" : 328,
+        "line" : 343,
         "column" : 8,
         "source_fragment" : "update_checksum_with_payload( ..."
       },
       "target" : ["tcp", "checksum"],
       "type" : "generic",
-      "calculation" : "calc_4",
+      "calculation" : "calc_3",
       "verify" : false,
       "update" : true,
       "if_cond" : {

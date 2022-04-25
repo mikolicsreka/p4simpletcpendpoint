@@ -38,6 +38,13 @@ actions {
 }
 actions {
   preamble {
+    id: 30599337
+    name: "MyIngress.set_fin"
+    alias: "set_fin"
+  }
+}
+actions {
+  preamble {
     id: 17066683
     name: "MyIngress.create_syn_ack_response"
     alias: "create_syn_ack_response"

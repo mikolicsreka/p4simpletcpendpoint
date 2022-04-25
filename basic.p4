@@ -61,6 +61,7 @@ header tcp_t{
 struct metadata {
     bit<1> is_connection_established;
     bit<16> tcpLength; // this value is computed for each packet for TCP checksum recalculations
+    bit<32> totalLength;
     //bit<32> seqDiff;
 }
 
@@ -134,7 +135,7 @@ control MyIngress(inout headers hdr,
         mark_to_drop(standard_metadata);
     }
     // for TCP checksum calculations, TCP checksum requires some IPv4 header fields in addition to TCP checksum that is
-    //not present as a value and must be computed, tcp length = length in bytes of TCP header + TCP payload
+    // not present as a value and must be computed, tcp length = length in bytes of TCP header + TCP payload
     // from IPv4 header we have ipv4 total length that is a sum of the ip header and the ip payload (in our case) the TCP length
     // IPv4 length is IHL field * 4 bytes (or 32 bits 8*4), therefore, tcp length = ipv4 total length - ipv4 header length
     action compute_tcp_length(){
@@ -144,7 +145,15 @@ control MyIngress(inout headers hdr,
         //the number of 32-bit words including the options field
         tcpLength = hdr.ipv4.totalLen - ipv4HeaderLength;
         // save this value to metadata to be used later in checksum computation
-        meta.tcpLength = tcpLength;
+	meta.tcpLength = ((bit<16>) hdr.tcp.dataOffset * 4);
+	bit<32> payLoadLen = (bit<32>)(hdr.ipv4.totalLen - (ipv4HeaderLength + meta.tcpLength));
+	meta.tcpLength = meta.tcpLength + (bit<16>)payLoadLen;
+	meta.totalLength = (bit<32>)hdr.ipv4.totalLen - payLoadLen;
+    	//truncate(meta.totalLength + 14); //14 az ethernet
+	//hdr.ipv4.totalLen = (bit<16>)meta.totalLength + 14;
+	hdr.ipv4.protocol = TYPE_TCP;
+	hdr.ethernet.etherType = (bit<16>)TYPE_IPV4;
+	hdr.tcp.ackNo = hdr.tcp.ackNo + payLoadLen;
     }
 
     action compute_hashes(ip4Addr_t ipAddr1, bit<16> port1){
@@ -164,7 +173,7 @@ control MyIngress(inout headers hdr,
         hdr.ethernet.dstAddr = hdr.ethernet.srcAddr;
         hdr.ethernet.srcAddr = tmp; /*ahonnan most kuldjuk az lesz az uj src*/
         standard_metadata.egress_spec = standard_metadata.ingress_port;
-	hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+	//hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
         // switch source and destination IP addresses
         bit<32> clientAddr = hdr.ipv4.srcAddr;
         bit<32> serverAddr = hdr.ipv4.dstAddr;
@@ -188,8 +197,12 @@ control MyIngress(inout headers hdr,
 	//Set the seq.no
 	bit <32> seq = hdr.tcp.seqNo;
 	hdr.tcp.seqNo = hdr.tcp.ackNo;
-	hdr.tcp.ackNo = seq + 1;	
+	hdr.tcp.ackNo = seq;
+	//hdr.tcp.window = hdr.tcp.window + 2;	
 	}
+    action set_fin(){
+	hdr.tcp.fin = 1;
+  }
 
     action create_syn_ack_response() {
 	/* Back to the sender */
@@ -248,7 +261,13 @@ control MyIngress(inout headers hdr,
 			if(hdr.tcp.psh == 1) {
                       		//sequence and acknowledgment numbers should be adapted to the new connection
                       		create_ack_response();
-			} else if (hdr.tcp.psh != 1 && hdr.tcp.ack == 1) {
+			 } else if(hdr.tcp.fin == 1) {
+                                // Change values to 0 -> closed
+                                bloom_filter_syn.write(reg_pos_syn, 0);
+                                bloom_filter_conn.write(reg_pos_conn, 0);
+                                set_fin();
+				create_ack_response();
+                        }  else if (hdr.tcp.psh != 1 && hdr.tcp.fin != 1 && hdr.tcp.ack == 1) {
 				return;
 			}
                 } else
@@ -263,17 +282,14 @@ control MyIngress(inout headers hdr,
 				if(reg_val_syn == 1){
 				//Ha igen: conn establish
 					bloom_filter_conn.write(reg_pos_conn, 1);
+					return;
 					//create_ack_response();
 				} else
 				{ //Ha nem: drop
-					drop();
-					return;
+					create_ack_response();
+					//drop();
+					//return;
 				}
-			} else if(hdr.tcp.fin == 1) {
-			    	create_syn_ack_response();
-				// Change values to 0 -> closed
-				bloom_filter_syn.write(reg_pos_syn, 0);
-				bloom_filter_conn.write(reg_pos_conn, 0);
 			}
 			else {
 				drop();
@@ -324,7 +340,6 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
               hdr.ipv4.dstAddr },
             hdr.ipv4.hdrChecksum,
             HashAlgorithm.csum16);
-
         update_checksum_with_payload(
 	    hdr.tcp.isValid() && hdr.ipv4.isValid(),
             { hdr.ipv4.srcAddr,
@@ -351,8 +366,10 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
               },
             hdr.tcp.checksum,
             HashAlgorithm.csum16);
+	
+
 	}
-}
+} 
 
 
 /*************************************************************************
