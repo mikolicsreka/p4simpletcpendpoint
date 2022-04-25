@@ -1,4 +1,4 @@
-/* -*- P4_16 -*- */
+/* -*- P4_16 -*-*/
 #include <core.p4>
 #include <v1model.p4>
 
@@ -62,7 +62,6 @@ struct metadata {
     bit<1> is_connection_established;
     bit<16> tcpLength; // this value is computed for each packet for TCP checksum recalculations
     bit<32> totalLength;
-    //bit<32> seqDiff;
 }
 
 struct headers {
@@ -144,16 +143,15 @@ control MyIngress(inout headers hdr,
         //this gives the size of IPv4 header in bytes, since ihl value represents
         //the number of 32-bit words including the options field
         tcpLength = hdr.ipv4.totalLen - ipv4HeaderLength;
-        // save this value to metadata to be used later in checksum computation
-	meta.tcpLength = ((bit<16>) hdr.tcp.dataOffset * 4);
+	// save this value to metadata to be used later in checksum computation
+	meta.tcpLength = ((bit<16>)hdr.tcp.dataOffset) * 4;
 	bit<32> payLoadLen = (bit<32>)(hdr.ipv4.totalLen - (ipv4HeaderLength + meta.tcpLength));
-	meta.tcpLength = meta.tcpLength + (bit<16>)payLoadLen;
-	meta.totalLength = (bit<32>)hdr.ipv4.totalLen - payLoadLen;
-    	//truncate(meta.totalLength + 14); //14 az ethernet
-	//hdr.ipv4.totalLen = (bit<16>)meta.totalLength + 14;
-	hdr.ipv4.protocol = TYPE_TCP;
-	hdr.ethernet.etherType = (bit<16>)TYPE_IPV4;
+	meta.totalLength = (bit<32>)(hdr.ipv4.totalLen - (bit<16>)payLoadLen);
 	hdr.tcp.ackNo = hdr.tcp.ackNo + payLoadLen;
+	//hdr.ipv4.totalLen = (bit<16>)meta.totalLength;
+	hdr.ipv4.hdrChecksum = 0;
+	hdr.tcp.checksum = 0;
+	meta.tcpLength = hdr.ipv4.totalLen - ipv4HeaderLength;
     }
 
     action compute_hashes(ip4Addr_t ipAddr1, bit<16> port1){
@@ -316,7 +314,9 @@ control MyIngress(inout headers hdr,
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
-    apply {  }
+    apply {
+		//truncate(meta.totalLength + 14);
+	}
 }
 
 /*************************************************************************
@@ -340,6 +340,7 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
               hdr.ipv4.dstAddr },
             hdr.ipv4.hdrChecksum,
             HashAlgorithm.csum16);
+
         update_checksum_with_payload(
 	    hdr.tcp.isValid() && hdr.ipv4.isValid(),
             { hdr.ipv4.srcAddr,
