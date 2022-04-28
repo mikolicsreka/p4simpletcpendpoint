@@ -200,6 +200,7 @@ control MyIngress(inout headers hdr,
 	}
     action set_fin(){
 	hdr.tcp.fin = 1;
+	hdr.tcp.ackNo = hdr.tcp.ackNo + 1;
   }
 
     action create_syn_ack_response() {
@@ -263,8 +264,8 @@ control MyIngress(inout headers hdr,
                                 // Change values to 0 -> closed
                                 bloom_filter_syn.write(reg_pos_syn, 0);
                                 bloom_filter_conn.write(reg_pos_conn, 0);
-                                set_fin();
 				create_ack_response();
+				set_fin();
                         }  else if (hdr.tcp.psh != 1 && hdr.tcp.fin != 1 && hdr.tcp.ack == 1) {
 				return;
 			}
@@ -284,9 +285,9 @@ control MyIngress(inout headers hdr,
 					//create_ack_response();
 				} else
 				{ //Ha nem: drop
-					create_ack_response();
-					//drop();
-					//return;
+					//create_ack_response();
+					drop();
+					return;
 				}
 			}
 			else {
