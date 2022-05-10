@@ -41,6 +41,7 @@ and which address has an already established connection (named `bloom_filter_con
 The filter's first field is the hashed IP and port, the second is a bit that represents the boolean value (eg. if received, then 1, if not, then 0).
 The SYN-ACK packet's values are modified according to the image above.
 As we receive the ACK after the SYN (as the last packet of the TCP handshake), the connection is handled as established.
+I introduced a third bloom filter (`bloom_filter_syn_ackno`) for checking if the AckNo for the received ACK packet is correct. (Sent immediately after the SYN-ACK packet that we sent.)
 
 ### Data flow
 For the established connections it is simply sends back and ACK response, its values are configured as shown in the figure above.
@@ -96,8 +97,6 @@ and a basic ACK response is sent back with the FIN flag set to true.
 	- P4 provides a `truncate(<bit32>length)` function. 
 	- In the IP header, the totalLen field must be updated (subtract the payload length).
 	- The TCP checksum calculation must be updated to the correct values, without the payload.
-2. Three way handshake:
-	- Checking the ACK number after the SYN packet
 
 ### A note about the control plane
 
@@ -123,6 +122,6 @@ these `sX-runtime.json` files.
 
 The documentation for P4_16 and P4Runtime is available [here](https://p4.org/specs/)
 
-All excercises in this repository use the v1model architecture, the documentation for which is available at:
+The exercise in this repository use the v1model architecture, the documentation for which is available at:
 1. The BMv2 Simple Switch target document accessible [here](https://github.com/p4lang/behavioral-model/blob/master/docs/simple_switch.md) talks mainly about the v1model architecture.
 2. The include file `v1model.p4` has extensive comments and can be accessed [here](https://github.com/p4lang/p4c/blob/master/p4include/v1model.p4).
