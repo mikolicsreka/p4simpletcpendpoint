@@ -126,8 +126,9 @@ control MyIngress(inout headers hdr,
                   inout standard_metadata_t standard_metadata) {
     //For packets coming after connection establishment	
     register<bit<BLOOM_FILTER_BIT_WIDTH>>(BLOOM_FILTER_ENTRIES) bloom_filter_syn;
+    register<bit<32>>(BLOOM_FILTER_ENTRIES) bloom_filter_syn_ackno;
     register<bit<BLOOM_FILTER_BIT_WIDTH>>(BLOOM_FILTER_ENTRIES) bloom_filter_conn;
-    bit<32> reg_pos_syn; bit<1> reg_val_syn;
+    bit<32> reg_pos_syn; bit<1> reg_val_syn; bit<32> reg_ackno;
     bit<32> reg_pos_conn; bit<1> reg_val_conn;
 
     action drop() {
@@ -150,7 +151,6 @@ control MyIngress(inout headers hdr,
 	hdr.tcp.ackNo = hdr.tcp.ackNo + payLoadLen;
 	//hdr.ipv4.totalLen = (bit<16>)meta.totalLength;
 	hdr.ipv4.hdrChecksum = 0;
-	hdr.tcp.checksum = 0;
 	meta.tcpLength = hdr.ipv4.totalLen - ipv4HeaderLength;
     }
 
@@ -239,6 +239,7 @@ control MyIngress(inout headers hdr,
         hdr.tcp.seqNo = seqNo + 1000;
     	//hdr.tcp.dataOffset=5;
 	hdr.tcp.window = hdr.tcp.window + 1000;
+	bloom_filter_syn_ackno.write(reg_pos_syn, hdr.tcp.seqNo+1);
     }
     
     apply {
@@ -272,19 +273,27 @@ control MyIngress(inout headers hdr,
                 } else
 		{
 			if(hdr.tcp.syn == 1 && hdr.tcp.ack == 0){
-				//Megjott az elso SYN packet -> beletesszuk a syn bloomfiltebe
+				//First SYN packet -> syn bloomfilter true
 				bloom_filter_syn.write(reg_pos_syn, 1);
 				create_syn_ack_response();	
 			} else if(hdr.tcp.syn == 0 && hdr.tcp.ack == 1) {
-				//1. Volt mar syn?
+				//1. Have we received syn?
 				bloom_filter_syn.read(reg_val_syn, reg_pos_syn);
 				if(reg_val_syn == 1){
-				//Ha igen: conn establish
-					bloom_filter_conn.write(reg_pos_conn, 1);
-					return;
+				//AckNo is correct?
+					bloom_filter_syn_ackno.read(reg_ackno, reg_pos_syn);
+					if(reg_ackno == hdr.tcp.ackNo) {
+						bloom_filter_conn.write(reg_pos_conn, 1);
+						return;
+					}
+					else
+					{
+					  drop();
+					  return;
+					}
 					//create_ack_response();
 				} else
-				{ //Ha nem: drop
+				{ //If not: drop
 					//create_ack_response();
 					drop();
 					return;
@@ -316,7 +325,8 @@ control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
     apply {
-		//truncate(meta.totalLength + 14);
+	 //truncate((bit<32>)hdr.ipv4.totalLen + 14);
+	 hdr.tcp.checksum = 16w0;
 	}
 }
 
@@ -379,7 +389,7 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
 *************************************************************************/
 
 control MyDeparser(packet_out packet, in headers hdr) {
-    apply {
+	apply {
    	packet.emit(hdr.ethernet);
 	packet.emit(hdr.ipv4);
 	packet.emit(hdr.tcp);
